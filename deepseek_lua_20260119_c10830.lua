@@ -1,0 +1,1018 @@
+-- Tsunami for brainrots v1 galaxy hub
+-- Galaxy UI Theme
+
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local StarterGui = game:GetService("StarterGui")
+
+-- Configurações
+local PLAYER = Players.LocalPlayer
+local MOUSE = PLAYER:GetMouse()
+local SCREEN_GUI = Instance.new("ScreenGui")
+local MAIN_FRAME = nil
+local MINIMIZED = false
+local CURRENT_TWEEN = nil
+local SELECTED_RARITY = ""
+local SELECTED_BRAINROT = ""
+local ESP_ENABLED = false
+local ESP_OBJECTS = {}
+local SPEED_ENABLED = false
+local TP_ACTIVE = false
+
+-- Função para criar elementos UI com tema Galaxy
+local function createGalaxyElement(elementType, properties)
+    local element = Instance.new(elementType)
+    
+    for prop, value in pairs(properties) do
+        if prop ~= "Parent" then
+            element[prop] = value
+        end
+    end
+    
+    if properties.Parent then
+        element.Parent = properties.Parent
+    end
+    
+    return element
+end
+
+-- Cores Galaxy
+local COLORS = {
+    Background = Color3.fromRGB(20, 10, 40),
+    Secondary = Color3.fromRGB(30, 15, 60),
+    Accent = Color3.fromRGB(100, 50, 150),
+    Text = Color3.fromRGB(255, 255, 255),
+    Border = Color3.fromRGB(138, 43, 226) -- Violeta para bordas RGB
+}
+
+-- Função para criar efeito RGB nas bordas
+local function createRGBBorder(frame)
+    local border1 = createGalaxyElement("UIStroke", {
+        Parent = frame,
+        Color = Color3.fromRGB(255, 0, 0),
+        Thickness = 2,
+        Transparency = 0.5
+    })
+    
+    local border2 = createGalaxyElement("UIStroke", {
+        Parent = frame,
+        Color = Color3.fromRGB(0, 255, 0),
+        Thickness = 1.5,
+        Transparency = 0.5
+    })
+    
+    local border3 = createGalaxyElement("UIStroke", {
+        Parent = frame,
+        Color = Color3.fromRGB(0, 0, 255),
+        Thickness = 1,
+        Transparency = 0.5
+    })
+    
+    local connection
+    connection = RunService.RenderStepped:Connect(function(time)
+        local hue = (tick() * 50) % 360
+        local color1 = Color3.fromHSV(hue/360, 1, 1)
+        local color2 = Color3.fromHSV((hue + 120)/360, 1, 1)
+        local color3 = Color3.fromHSV((hue + 240)/360, 1, 1)
+        
+        border1.Color = color1
+        border2.Color = color2
+        border3.Color = color3
+    end)
+    
+    return {border1, border2, connection}
+end
+
+-- Criação da UI principal
+SCREEN_GUI.Name = "TsunamiGalaxyHub"
+SCREEN_GUI.ResetOnSpawn = false
+SCREEN_GUI.ZIndexBehavior = Enum.ZIndexBehavior.Global
+
+-- Frame principal
+MAIN_FRAME = createGalaxyElement("Frame", {
+    Name = "MainFrame",
+    Size = UDim2.new(0, 500, 0, 400),
+    Position = UDim2.new(0.5, -250, 0.5, -200),
+    BackgroundColor3 = COLORS.Background,
+    BackgroundTransparency = 0.2,
+    BorderSizePixel = 0,
+    Parent = SCREEN_GUI
+})
+
+-- Arredondar cantos
+local corner = createGalaxyElement("UICorner", {
+    CornerRadius = UDim.new(0, 12),
+    Parent = MAIN_FRAME
+})
+
+-- Bordas RGB
+local borders = createRGBBorder(MAIN_FRAME)
+
+-- Barra de título
+local titleBar = createGalaxyElement("Frame", {
+    Name = "TitleBar",
+    Size = UDim2.new(1, 0, 0, 30),
+    Position = UDim2.new(0, 0, 0, 0),
+    BackgroundColor3 = COLORS.Secondary,
+    BackgroundTransparency = 0.1,
+    BorderSizePixel = 0,
+    Parent = MAIN_FRAME
+})
+
+local titleCorner = createGalaxyElement("UICorner", {
+    CornerRadius = UDim.new(0, 12),
+    Parent = titleBar
+})
+
+-- Texto do título
+local titleText = createGalaxyElement("TextLabel", {
+    Name = "TitleText",
+    Size = UDim2.new(0, 250, 1, 0),
+    Position = UDim2.new(0, 10, 0, 0),
+    BackgroundTransparency = 1,
+    Text = "Tsunami for brainrots v1 galaxy hub",
+    TextColor3 = COLORS.Text,
+    TextSize = 14,
+    Font = Enum.Font.GothamBold,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    Parent = titleBar
+})
+
+-- Botões da barra de título
+local buttonClose = createGalaxyElement("TextButton", {
+    Name = "CloseButton",
+    Size = UDim2.new(0, 30, 0, 30),
+    Position = UDim2.new(1, -30, 0, 0),
+    BackgroundColor3 = Color3.fromRGB(255, 50, 50),
+    BackgroundTransparency = 0.2,
+    Text = "X",
+    TextColor3 = COLORS.Text,
+    TextSize = 14,
+    Font = Enum.Font.GothamBold,
+    Parent = titleBar
+})
+
+local buttonMinimize = createGalaxyElement("TextButton", {
+    Name = "MinimizeButton",
+    Size = UDim2.new(0, 30, 0, 30),
+    Position = UDim2.new(1, -60, 0, 0),
+    BackgroundColor3 = COLORS.Accent,
+    BackgroundTransparency = 0.2,
+    Text = "_",
+    TextColor3 = COLORS.Text,
+    TextSize = 14,
+    Font = Enum.Font.GothamBold,
+    Parent = titleBar
+})
+
+local buttonMaximize = createGalaxyElement("TextButton", {
+    Name = "MaximizeButton",
+    Size = UDim2.new(0, 30, 0, 30),
+    Position = UDim2.new(1, -90, 0, 0),
+    BackgroundColor3 = COLORS.Accent,
+    BackgroundTransparency = 0.2,
+    Text = "□",
+    TextColor3 = COLORS.Text,
+    TextSize = 14,
+    Font = Enum.Font.GothamBold,
+    Parent = titleBar
+})
+
+-- Área das abas
+local tabArea = createGalaxyElement("Frame", {
+    Name = "TabArea",
+    Size = UDim2.new(0, 120, 0, 370),
+    Position = UDim2.new(0, 0, 0, 30),
+    BackgroundColor3 = COLORS.Secondary,
+    BackgroundTransparency = 0.3,
+    BorderSizePixel = 0,
+    Parent = MAIN_FRAME
+})
+
+local contentArea = createGalaxyElement("Frame", {
+    Name = "ContentArea",
+    Size = UDim2.new(0, 380, 0, 370),
+    Position = UDim2.new(0, 120, 0, 30),
+    BackgroundTransparency = 1,
+    BorderSizePixel = 0,
+    Parent = MAIN_FRAME
+})
+
+-- Abas laterais
+local tabs = {
+    Main = {frame = nil, button = nil},
+    Speed = {frame = nil, button = nil}
+}
+
+-- Função para alternar abas
+local function switchTab(tabName)
+    for name, tabData in pairs(tabs) do
+        if tabData.frame then
+            tabData.frame.Visible = (name == tabName)
+            if tabData.button then
+                tabData.button.BackgroundColor3 = (name == tabName) and COLORS.Accent or COLORS.Secondary
+            end
+        end
+    end
+end
+
+-- Criar aba Main
+tabs.Main.button = createGalaxyElement("TextButton", {
+    Name = "MainTabButton",
+    Size = UDim2.new(1, -10, 0, 40),
+    Position = UDim2.new(0, 5, 0, 10),
+    BackgroundColor3 = COLORS.Accent,
+    BackgroundTransparency = 0.2,
+    Text = "MAIN",
+    TextColor3 = COLORS.Text,
+    TextSize = 12,
+    Font = Enum.Font.GothamBold,
+    Parent = tabArea
+})
+
+tabs.Main.frame = createGalaxyElement("ScrollingFrame", {
+    Name = "MainTab",
+    Size = UDim2.new(1, 0, 1, 0),
+    Position = UDim2.new(0, 0, 0, 0),
+    BackgroundTransparency = 1,
+    BorderSizePixel = 0,
+    ScrollBarThickness = 3,
+    CanvasSize = UDim2.new(0, 0, 0, 800),
+    Visible = true,
+    Parent = contentArea
+})
+
+-- Criar aba Speed
+tabs.Speed.button = createGalaxyElement("TextButton", {
+    Name = "SpeedTabButton",
+    Size = UDim2.new(1, -10, 0, 40),
+    Position = UDim2.new(0, 5, 0, 60),
+    BackgroundColor3 = COLORS.Secondary,
+    BackgroundTransparency = 0.2,
+    Text = "SPEED GLITCH",
+    TextColor3 = COLORS.Text,
+    TextSize = 12,
+    Font = Enum.Font.GothamBold,
+    Parent = tabArea
+})
+
+tabs.Speed.frame = createGalaxyElement("ScrollingFrame", {
+    Name = "SpeedTab",
+    Size = UDim2.new(1, 0, 1, 0),
+    Position = UDim2.new(0, 0, 0, 0),
+    BackgroundTransparency = 1,
+    BorderSizePixel = 0,
+    ScrollBarThickness = 3,
+    CanvasSize = UDim2.new(0, 0, 0, 300),
+    Visible = false,
+    Parent = contentArea
+})
+
+-- Sistema de arrastar
+local dragging = false
+local dragStart = nil
+local startPos = nil
+
+titleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = MAIN_FRAME.Position
+    end
+end)
+
+titleBar.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = false
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = input.Position - dragStart
+        MAIN_FRAME.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, 
+                                       startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+-- Funções dos botões da barra de título
+buttonClose.MouseButton1Click:Connect(function()
+    SCREEN_GUI:Destroy()
+    if borders[3] then
+        borders[3]:Disconnect()
+    end
+end)
+
+buttonMinimize.MouseButton1Click:Connect(function()
+    MINIMIZED = true
+    for _, child in pairs(contentArea:GetChildren()) do
+        if child:IsA("Frame") or child:IsA("ScrollingFrame") then
+            child.Visible = false
+        end
+    end
+    for _, child in pairs(tabArea:GetChildren()) do
+        if child:IsA("TextButton") then
+            child.Visible = false
+        end
+    end
+    MAIN_FRAME.Size = UDim2.new(0, 500, 0, 30)
+end)
+
+buttonMaximize.MouseButton1Click:Connect(function()
+    if MINIMIZED then
+        MINIMIZED = false
+        MAIN_FRAME.Size = UDim2.new(0, 500, 0, 400)
+        for _, child in pairs(tabArea:GetChildren()) do
+            if child:IsA("TextButton") then
+                child.Visible = true
+            end
+        end
+        switchTab("Main")
+    end
+end)
+
+-- Conectar botões das abas
+tabs.Main.button.MouseButton1Click:Connect(function()
+    switchTab("Main")
+end)
+
+tabs.Speed.button.MouseButton1Click:Connect(function()
+    switchTab("Speed")
+end)
+
+-- ========== FUNÇÕES DA ABA MAIN ==========
+
+-- Função para listar pastas de raridades
+local function listRarities()
+    local rarities = {}
+    local activeBrainrots = Workspace:FindFirstChild("ActiveBrainrots")
+    
+    if activeBrainrots then
+        for _, folder in pairs(activeBrainrots:GetChildren()) do
+            if folder:IsA("Folder") then
+                table.insert(rarities, folder.Name)
+            end
+        end
+    end
+    
+    return rarities
+end
+
+-- Função para criar UI de seleção
+local function createSelectionUI(title, items, callback)
+    local selectionUI = createGalaxyElement("Frame", {
+        Name = "SelectionUI",
+        Size = UDim2.new(0, 300, 0, 400),
+        Position = UDim2.new(0.5, -150, 0.5, -200),
+        BackgroundColor3 = COLORS.Background,
+        BackgroundTransparency = 0.1,
+        BorderSizePixel = 0,
+        Parent = SCREEN_GUI
+    })
+    
+    local corner = createGalaxyElement("UICorner", {
+        CornerRadius = UDim.new(0, 12),
+        Parent = selectionUI
+    })
+    
+    createRGBBorder(selectionUI)
+    
+    local titleBar = createGalaxyElement("Frame", {
+        Size = UDim2.new(1, 0, 0, 30),
+        BackgroundColor3 = COLORS.Secondary,
+        BorderSizePixel = 0,
+        Parent = selectionUI
+    })
+    
+    local titleText = createGalaxyElement("TextLabel", {
+        Size = UDim2.new(1, -60, 1, 0),
+        Position = UDim2.new(0, 10, 0, 0),
+        BackgroundTransparency = 1,
+        Text = title,
+        TextColor3 = COLORS.Text,
+        TextSize = 14,
+        Font = Enum.Font.GothamBold,
+        Parent = titleBar
+    })
+    
+    local closeButton = createGalaxyElement("TextButton", {
+        Size = UDim2.new(0, 30, 0, 30),
+        Position = UDim2.new(1, -30, 0, 0),
+        BackgroundColor3 = Color3.fromRGB(255, 50, 50),
+        Text = "X",
+        TextColor3 = COLORS.Text,
+        TextSize = 14,
+        Font = Enum.Font.GothamBold,
+        Parent = titleBar
+    })
+    
+    local selectAllButton = createGalaxyElement("TextButton", {
+        Size = UDim2.new(0, 100, 0, 30),
+        Position = UDim2.new(0, 10, 0, 40),
+        BackgroundColor3 = COLORS.Accent,
+        Text = "Select All",
+        TextColor3 = COLORS.Text,
+        TextSize = 12,
+        Font = Enum.Font.GothamBold,
+        Parent = selectionUI
+    })
+    
+    local listFrame = createGalaxyElement("ScrollingFrame", {
+        Size = UDim2.new(1, -20, 0, 300),
+        Position = UDim2.new(0, 10, 0, 80),
+        BackgroundColor3 = COLORS.Secondary,
+        BackgroundTransparency = 0.3,
+        BorderSizePixel = 0,
+        ScrollBarThickness = 3,
+        CanvasSize = UDim2.new(0, 0, 0, #items * 30),
+        Parent = selectionUI
+    })
+    
+    for i, item in pairs(items) do
+        local itemButton = createGalaxyElement("TextButton", {
+            Size = UDim2.new(1, -10, 0, 25),
+            Position = UDim2.new(0, 5, 0, (i-1)*30),
+            BackgroundColor3 = COLORS.Background,
+            BackgroundTransparency = 0.5,
+            Text = item,
+            TextColor3 = COLORS.Text,
+            TextSize = 11,
+            Font = Enum.Font.Gotham,
+            Parent = listFrame
+        })
+        
+        itemButton.MouseButton1Click:Connect(function()
+            if callback then
+                callback(item)
+            end
+            selectionUI:Destroy()
+        end)
+    end
+    
+    selectAllButton.MouseButton1Click:Connect(function()
+        if callback then
+            callback("ALL")
+        end
+        selectionUI:Destroy()
+    end)
+    
+    closeButton.MouseButton1Click:Connect(function()
+        selectionUI:Destroy()
+    end)
+    
+    return selectionUI
+end
+
+-- Sistema ESP otimizado
+local function createESP(part, name, rarity, distance)
+    if not part or not part:IsA("BasePart") then return nil end
+    
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "BrainrotESP"
+    billboard.Size = UDim2.new(0, 200, 0, 100)
+    billboard.AlwaysOnTop = true
+    billboard.Enabled = true
+    billboard.Adornee = part
+    billboard.Parent = part
+    
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, 0, 1, 0)
+    frame.BackgroundTransparency = 1
+    frame.Parent = billboard
+    
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Size = UDim2.new(1, 0, 0, 20)
+    nameLabel.Position = UDim2.new(0, 0, 0, 0)
+    nameLabel.Text = "Name: " .. name
+    nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.TextSize = 12
+    nameLabel.Parent = frame
+    
+    local rarityLabel = Instance.new("TextLabel")
+    rarityLabel.Size = UDim2.new(1, 0, 0, 20)
+    rarityLabel.Position = UDim2.new(0, 0, 0, 25)
+    rarityLabel.Text = "Rarity: " .. rarity
+    rarityLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
+    rarityLabel.BackgroundTransparency = 1
+    rarityLabel.TextSize = 12
+    rarityLabel.Parent = frame
+    
+    local distanceLabel = Instance.new("TextLabel")
+    distanceLabel.Size = UDim2.new(1, 0, 0, 20)
+    distanceLabel.Position = UDim2.new(0, 0, 0, 50)
+    distanceLabel.Text = "Distance: " .. math.floor(distance or 0) .. " studs"
+    distanceLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
+    distanceLabel.BackgroundTransparency = 1
+    distanceLabel.TextSize = 12
+    distanceLabel.Parent = frame
+    
+    return billboard
+end
+
+local function updateESP()
+    if not ESP_ENABLED or SELECTED_RARITY == "" then return end
+    
+    -- Limpar ESP antigos
+    for _, esp in pairs(ESP_OBJECTS) do
+        if esp then
+            esp:Destroy()
+        end
+    end
+    ESP_OBJECTS = {}
+    
+    local activeBrainrots = Workspace:FindFirstChild("ActiveBrainrots")
+    if not activeBrainrots then return end
+    
+    local rarityFolder = activeBrainrots:FindFirstChild(SELECTED_RARITY)
+    if not rarityFolder then return end
+    
+    local character = PLAYER.Character
+    if not character then return end
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+    if not humanoidRootPart then return end
+    
+    -- Função recursiva para buscar modelos RenderBrainrot
+    local function searchForBrainrots(parent)
+        for _, child in pairs(parent:GetChildren()) do
+            if child.Name == "RenderBrainrot" and child:IsA("Model") then
+                local primaryPart = child.PrimaryPart or child:FindFirstChildWhichIsA("BasePart")
+                if primaryPart then
+                    local distance = (humanoidRootPart.Position - primaryPart.Position).Magnitude
+                    
+                    -- Procurar por BrainrotMoney
+                    local moneyText = nil
+                    local function findMoney(obj)
+                        for _, child2 in pairs(obj:GetChildren()) do
+                            if child2:IsA("Model") or child2:IsA("Folder") then
+                                findMoney(child2)
+                            elseif child2.Name == "BrainrotMoney" and child2:IsA("StringValue") then
+                                moneyText = child2.Value
+                            end
+                        end
+                    end
+                    findMoney(child)
+                    
+                    local esp = createESP(primaryPart, child.Name, SELECTED_RARITY, distance)
+                    if esp then
+                        table.insert(ESP_OBJECTS, esp)
+                    end
+                end
+            else
+                searchForBrainrots(child)
+            end
+        end
+    end
+    
+    searchForBrainrots(rarityFolder)
+end
+
+-- 1. Select Rarity
+local selectRarityButton = createGalaxyElement("TextButton", {
+    Name = "SelectRarityButton",
+    Size = UDim2.new(0, 180, 0, 30),
+    Position = UDim2.new(0, 10, 0, 10),
+    BackgroundColor3 = COLORS.Accent,
+    BackgroundTransparency = 0.2,
+    Text = "Select Rarity",
+    TextColor3 = COLORS.Text,
+    TextSize = 12,
+    Font = Enum.Font.GothamBold,
+    Parent = tabs.Main.frame
+})
+
+local espToggle = createGalaxyElement("TextButton", {
+    Name = "ESPToggle",
+    Size = UDim2.new(0, 180, 0, 30),
+    Position = UDim2.new(0, 10, 0, 50),
+    BackgroundColor3 = COLORS.Secondary,
+    BackgroundTransparency = 0.2,
+    Text = "ESP: OFF",
+    TextColor3 = Color3.fromRGB(255, 100, 100),
+    TextSize = 12,
+    Font = Enum.Font.GothamBold,
+    Parent = tabs.Main.frame
+})
+
+selectRarityButton.MouseButton1Click:Connect(function()
+    local rarities = listRarities()
+    createSelectionUI("Select Rarity", rarities, function(selected)
+        SELECTED_RARITY = selected
+        selectRarityButton.Text = "Rarity: " .. selected
+    end)
+end)
+
+espToggle.MouseButton1Click:Connect(function()
+    ESP_ENABLED = not ESP_ENABLED
+    espToggle.Text = ESP_ENABLED and "ESP: ON" or "ESP: OFF"
+    espToggle.TextColor3 = ESP_ENABLED and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 100, 100)
+    
+    if ESP_ENABLED then
+        updateESP()
+        local espUpdateConnection
+        espUpdateConnection = RunService.Heartbeat:Connect(function()
+            if ESP_ENABLED then
+                updateESP()
+            else
+                espUpdateConnection:Disconnect()
+            end
+        end)
+    else
+        for _, esp in pairs(ESP_OBJECTS) do
+            if esp then
+                esp:Destroy()
+            end
+        end
+        ESP_OBJECTS = {}
+    end
+end)
+
+-- 2. Select Brainrots
+local selectBrainrotButton = createGalaxyElement("TextButton", {
+    Name = "SelectBrainrotButton",
+    Size = UDim2.new(0, 180, 0, 30),
+    Position = UDim2.new(0, 10, 0, 90),
+    BackgroundColor3 = COLORS.Accent,
+    BackgroundTransparency = 0.2,
+    Text = "Select Brainrot",
+    TextColor3 = COLORS.Text,
+    TextSize = 12,
+    Font = Enum.Font.GothamBold,
+    Parent = tabs.Main.frame
+})
+
+selectBrainrotButton.MouseButton1Click:Connect(function()
+    if SELECTED_RARITY == "" then return end
+    
+    local activeBrainrots = Workspace:FindFirstChild("ActiveBrainrots")
+    if not activeBrainrots then return end
+    
+    local rarityFolder = activeBrainrots:FindFirstChild(SELECTED_RARITY)
+    if not rarityFolder then return end
+    
+    local brainrotModels = {}
+    local function collectModels(parent)
+        for _, child in pairs(parent:GetChildren()) do
+            if child:IsA("Model") then
+                table.insert(brainrotModels, child.Name)
+            end
+            collectModels(child)
+        end
+    end
+    collectModels(rarityFolder)
+    
+    createSelectionUI("Select Brainrot", brainrotModels, function(selected)
+        SELECTED_BRAINROT = selected
+        selectBrainrotButton.Text = "Brainrot: " .. selected
+    end)
+end)
+
+-- 3. TP Selected Brainrots
+local tpV1Button = createGalaxyElement("TextButton", {
+    Name = "TPV1Button",
+    Size = UDim2.new(0, 180, 0, 30),
+    Position = UDim2.new(0, 10, 0, 130),
+    BackgroundColor3 = COLORS.Accent,
+    BackgroundTransparency = 0.2,
+    Text = "TP Brainrots v1",
+    TextColor3 = COLORS.Text,
+    TextSize = 12,
+    Font = Enum.Font.GothamBold,
+    Parent = tabs.Main.frame
+})
+
+local tpV2Button = createGalaxyElement("TextButton", {
+    Name = "TPV2Button",
+    Size = UDim2.new(0, 180, 0, 30),
+    Position = UDim2.new(0, 10, 0, 170),
+    BackgroundColor3 = COLORS.Accent,
+    BackgroundTransparency = 0.2,
+    Text = "TP Brainrots v2",
+    TextColor3 = COLORS.Text,
+    TextSize = 12,
+    Font = Enum.Font.GothamBold,
+    Parent = tabs.Main.frame
+})
+
+local function findClosestWave(startPos)
+    local activeTsunamis = Workspace:FindFirstChild("ActiveTsunamis")
+    if not activeTsunamis then return nil end
+    
+    local closest = nil
+    local closestDist = math.huge
+    
+    for _, obj in pairs(activeTsunamis:GetDescendants()) do
+        if obj.Name == "Wave" and obj:IsA("BasePart") then
+            local distance = (startPos - obj.Position).Magnitude
+            if distance < closestDist then
+                closestDist = distance
+                closest = obj
+            end
+        end
+    end
+    
+    return closest
+end
+
+tpV1Button.MouseButton1Click:Connect(function()
+    if TP_ACTIVE then
+        StarterGui:SetCore("SendNotification", {
+            Title = "Error",
+            Text = "Please wait for the current tween to finish!",
+            Duration = 3
+        })
+        return
+    end
+    
+    if SELECTED_BRAINROT == "" then return end
+    
+    TP_ACTIVE = true
+    local character = PLAYER.Character
+    if not character then 
+        TP_ACTIVE = false
+        return
+    end
+    
+    local humanoid = character:FindFirstChild("Humanoid")
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+    if not humanoid or not humanoidRootPart then
+        TP_ACTIVE = false
+        return
+    end
+    
+    -- Encontrar o modelo alvo
+    local targetModel = nil
+    local activeBrainrots = Workspace:FindFirstChild("ActiveBrainrots")
+    if activeBrainrots then
+        targetModel = activeBrainrots:FindFirstChild(SELECTED_BRAINROT, true)
+    end
+    
+    if not targetModel then
+        TP_ACTIVE = false
+        return
+    end
+    
+    local targetPart = targetModel.PrimaryPart or targetModel:FindFirstChildWhichIsA("BasePart")
+    if not targetPart then
+        TP_ACTIVE = false
+        return
+    end
+    
+    -- Sistema de TP v1
+    local function tpV1()
+        local lastWaveCheck = tick()
+        local currentPos = humanoidRootPart.Position
+        
+        while TP_ACTIVE and character and humanoid.Health > 0 do
+            local wave = findClosestWave(currentPos)
+            if wave and (currentPos - wave.Position).Magnitude < 38 then
+                -- Verificar Gaps
+                local misc = Workspace:FindFirstChild("Misc")
+                local gaps = Workspace:FindFirstChild("Gaps")
+                
+                local nearGap = false
+                if gaps then
+                    for _, gap in pairs(gaps:GetChildren()) do
+                        if gap:IsA("BasePart") then
+                            local distToGap = (wave.Position - gap.Position).Magnitude
+                            if distToGap < 10 then
+                                nearGap = true
+                                break
+                            end
+                        end
+                    end
+                end
+                
+                if not nearGap then
+                    -- Subir 20 studs
+                    local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+                    local tween = TweenService:Create(humanoidRootPart, tweenInfo, {Position = currentPos + Vector3.new(0, 20, 0)})
+                    tween:Play()
+                    tween.Completed:Wait()
+                end
+            end
+            
+            -- Mover em direção ao alvo
+            local direction = (targetPart.Position - currentPos).Unit
+            currentPos = currentPos + direction * 5
+            
+            local tweenInfo = TweenInfo.new(0.1, Enum.EasingStyle.Linear)
+            local tween = TweenService:Create(humanoidRootPart, tweenInfo, {Position = currentPos})
+            tween:Play()
+            
+            wait(0.1)
+        end
+    end
+    
+    coroutine.wrap(tpV1)()
+end)
+
+tpV2Button.MouseButton1Click:Connect(function()
+    if TP_ACTIVE then
+        StarterGui:SetCore("SendNotification", {
+            Title = "Error",
+            Text = "Please wait for the current tween to finish!",
+            Duration = 3
+        })
+        return
+    end
+    
+    if SELECTED_BRAINROT == "" then return end
+    
+    TP_ACTIVE = true
+    local character = PLAYER.Character
+    if not character then 
+        TP_ACTIVE = false
+        return
+    end
+    
+    local humanoid = character:FindFirstChild("Humanoid")
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+    if not humanoid or not humanoidRootPart then
+        TP_ACTIVE = false
+        return
+    end
+    
+    -- Encontrar o modelo alvo
+    local targetModel = nil
+    local activeBrainrots = Workspace:FindFirstChild("ActiveBrainrots")
+    if activeBrainrots then
+        targetModel = activeBrainrots:FindFirstChild(SELECTED_BRAINROT, true)
+    end
+    
+    if not targetModel then
+        TP_ACTIVE = false
+        return
+    end
+    
+    local targetPart = targetModel.PrimaryPart or targetModel:FindFirstChildWhichIsA("BasePart")
+    if not targetPart then
+        TP_ACTIVE = false
+        return
+    end
+    
+    -- Sistema de TP v2
+    local function tpV2()
+        -- Diminuir hitbox dos Waves
+        local activeTsunamis = Workspace:FindFirstChild("ActiveTsunamis")
+        if activeTsunamis then
+            for _, wave in pairs(activeTsunamis:GetDescendants()) do
+                if wave.Name == "Wave" and wave:IsA("BasePart") then
+                    wave.Size = Vector3.new(1, 1, 1)
+                end
+            end
+        end
+        
+        -- Descer 12 studs
+        local startPos = humanoidRootPart.Position
+        local downPos = startPos - Vector3.new(0, 12, 0)
+        
+        local tweenInfo1 = TweenInfo.new(0.5, Enum.EasingStyle.Quad)
+        local tween1 = TweenService:Create(humanoidRootPart, tweenInfo1, {Position = downPos})
+        tween1:Play()
+        tween1.Completed:Wait()
+        
+        -- Mover até o alvo
+        local tweenInfo2 = TweenInfo.new(2, Enum.EasingStyle.Quad)
+        local tween2 = TweenService:Create(humanoidRootPart, tweenInfo2, {Position = targetPart.Position})
+        tween2:Play()
+        tween2.Completed:Wait()
+        
+        -- Ativar proximity prompt
+        local prompt = targetPart:FindFirstChildWhichIsA("ProximityPrompt")
+        if prompt then
+            prompt:InputHoldBegin()
+            wait(0.1)
+            prompt:InputHoldEnd()
+        end
+        
+        -- Mover para o lado
+        local sidePos = humanoidRootPart.Position + Vector3.new(21, 0, 0)
+        local tweenInfo3 = TweenInfo.new(0.5, Enum.EasingStyle.Quad)
+        local tween3 = TweenService:Create(humanoidRootPart, tweenInfo3, {Position = sidePos})
+        tween3:Play()
+        tween3.Completed:Wait()
+        
+        -- Voltar para o spawn
+        local spawnLocation = Workspace:FindFirstChild("SpawnLocation") or Workspace:FindFirstChildWhichIsA("SpawnLocation")
+        if spawnLocation then
+            local tweenInfo4 = TweenInfo.new(1, Enum.EasingStyle.Quad)
+            local tween4 = TweenService:Create(humanoidRootPart, tweenInfo4, {Position = spawnLocation.Position})
+            tween4:Play()
+            tween4.Completed:Wait()
+        end
+        
+        TP_ACTIVE = false
+    end
+    
+    coroutine.wrap(tpV2)()
+end)
+
+-- ========== FUNÇÕES DA ABA SPEED ==========
+
+-- Speed Glitch
+local speedToggle = createGalaxyElement("TextButton", {
+    Name = "SpeedToggle",
+    Size = UDim2.new(0, 180, 0, 30),
+    Position = UDim2.new(0, 10, 0, 10),
+    BackgroundColor3 = COLORS.Secondary,
+    BackgroundTransparency = 0.2,
+    Text = "Speed Glitch: OFF",
+    TextColor3 = Color3.fromRGB(255, 100, 100),
+    TextSize = 12,
+    Font = Enum.Font.GothamBold,
+    Parent = tabs.Speed.frame
+})
+
+speedToggle.MouseButton1Click:Connect(function()
+    SPEED_ENABLED = not SPEED_ENABLED
+    speedToggle.Text = SPEED_ENABLED and "Speed Glitch: ON" or "Speed Glitch: OFF"
+    speedToggle.TextColor3 = SPEED_ENABLED and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 100, 100)
+    
+    if SPEED_ENABLED then
+        -- Aplicar glitch de velocidade
+        local character = PLAYER.Character
+        if character then
+            local humanoid = character:FindFirstChild("Humanoid")
+            if humanoid then
+                humanoid.WalkSpeed = 80 -- 80x mais rápido
+            end
+        end
+        
+        -- Conectar para manter velocidade
+        local connection
+        connection = RunService.Heartbeat:Connect(function()
+            if SPEED_ENABLED then
+                local character = PLAYER.Character
+                if character then
+                    local humanoid = character:FindFirstChild("Humanoid")
+                    if humanoid then
+                        humanoid.WalkSpeed = 80
+                    end
+                end
+            else
+                connection:Disconnect()
+                local character = PLAYER.Character
+                if character then
+                    local humanoid = character:FindFirstChild("Humanoid")
+                    if humanoid then
+                        humanoid.WalkSpeed = 16 -- Velocidade normal
+                    end
+                end
+            end
+        end)
+    else
+        -- Resetar velocidade
+        local character = PLAYER.Character
+        if character then
+            local humanoid = character:FindFirstChild("Humanoid")
+            if humanoid then
+                humanoid.WalkSpeed = 16
+            end
+        end
+    end
+end)
+
+-- Adicionar mais funcionalidades à aba Speed
+local antiAfkButton = createGalaxyElement("TextButton", {
+    Name = "AntiAFKButton",
+    Size = UDim2.new(0, 180, 0, 30),
+    Position = UDim2.new(0, 10, 0, 50),
+    BackgroundColor3 = COLORS.Accent,
+    BackgroundTransparency = 0.2,
+    Text = "Anti-AFK: OFF",
+    TextColor3 = COLORS.Text,
+    TextSize = 12,
+    Font = Enum.Font.GothamBold,
+    Parent = tabs.Speed.frame
+})
+
+local antiAfkEnabled = false
+antiAfkButton.MouseButton1Click:Connect(function()
+    antiAfkEnabled = not antiAfkEnabled
+    antiAfkButton.Text = antiAfkEnabled and "Anti-AFK: ON" or "Anti-AFK: OFF"
+    
+    if antiAfkEnabled then
+        local vu = game:GetService("VirtualUser")
+        game:GetService("Players").LocalPlayer.Idled:connect(function()
+            vu:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+            wait(1)
+            vu:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+        end)
+    end
+end)
+
+-- Instalar a UI
+SCREEN_GUI.Parent = game:GetService("CoreGui") or PLAYER:WaitForChild("PlayerGui")
+
+-- Notificação de inicialização
+StarterGui:SetCore("SendNotification", {
+    Title = "Tsunami Galaxy Hub",
+    Text = "UI loaded successfully!",
+    Duration = 5
+})
+
+print("Tsunami Galaxy Hub loaded successfully!")
