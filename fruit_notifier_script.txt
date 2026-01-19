@@ -1,0 +1,602 @@
+-- Galaxy Hub Notifier Fruit
+-- Blox Fruits Detection System
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local StarterGui = game:GetService("StarterGui")
+
+-- Fruit List
+local FruitList = {
+    -- COMMON
+    "Rocket Fruit", "Spin Fruit", "Chop Fruit", "Spring Fruit", "Bomb Fruit", "Smoke Fruit", "Spike Fruit",
+    -- UNCOMMON
+    "Flame Fruit", "Ice Fruit", "Sand Fruit", "Dark Fruit", "Diamond Fruit", "Light Fruit", "Ghost Fruit",
+    -- RARE
+    "Rubber Fruit", "Barrier Fruit", "Magma Fruit", "Quake Fruit", "Love Fruit", "Spider Fruit", "Sound Fruit",
+    -- LEGENDARY
+    "Phoenix Fruit", "Portal Fruit", "Rumble Fruit", "Gravity Fruit", "Blizzard Fruit", "Eagle Fruit", 
+    "Creation Fruit", "Pain Fruit",
+    -- MYTHICAL
+    "Dough Fruit", "Shadow Fruit", "Venom Fruit", "Control Fruit", "Spirit Fruit", "Leopard Fruit", 
+    "Mammoth Fruit", "T-Rex Fruit", "Kitsune Fruit", "Dragon Fruit", "Gas Fruit", "Yeti Fruit", 
+    "Tiger Fruit", "Blade Fruit"
+}
+
+-- Variables
+local ESPEnabled = false
+local DetectedFruits = {}
+local ESPObjects = {}
+local SelectedFruit = nil
+local TPInProgress = false
+
+-- Notification
+StarterGui:SetCore("SendNotification", {
+    Title = "Galaxy Hub";
+    Text = "Fruit Notifier Loaded!";
+    Duration = 5;
+})
+
+-- GUI Creation
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "GalaxyHubFruitNotifier"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+-- Main Frame
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 400, 0, 500)
+MainFrame.Position = UDim2.new(0.5, -200, 0.5, -250)
+MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+MainFrame.BorderSizePixel = 0
+MainFrame.Parent = ScreenGui
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 12)
+MainCorner.Parent = MainFrame
+
+-- Title Bar
+local TitleBar = Instance.new("Frame")
+TitleBar.Name = "TitleBar"
+TitleBar.Size = UDim2.new(1, 0, 0, 50)
+TitleBar.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+TitleBar.BorderSizePixel = 0
+TitleBar.Parent = MainFrame
+
+local TitleCorner = Instance.new("UICorner")
+TitleCorner.CornerRadius = UDim.new(0, 12)
+TitleCorner.Parent = TitleBar
+
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Size = UDim2.new(1, -120, 1, 0)
+TitleLabel.Position = UDim2.new(0, 15, 0, 0)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Text = "Galaxy Hub Notifier Fruit"
+TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleLabel.TextSize = 18
+TitleLabel.Font = Enum.Font.GothamBold
+TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+TitleLabel.Parent = TitleBar
+
+-- Minimize Button
+local MinimizeBtn = Instance.new("TextButton")
+MinimizeBtn.Name = "MinimizeBtn"
+MinimizeBtn.Size = UDim2.new(0, 30, 0, 30)
+MinimizeBtn.Position = UDim2.new(1, -95, 0.5, -15)
+MinimizeBtn.BackgroundColor3 = Color3.fromRGB(255, 200, 50)
+MinimizeBtn.Text = "_"
+MinimizeBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+MinimizeBtn.TextSize = 20
+MinimizeBtn.Font = Enum.Font.GothamBold
+MinimizeBtn.Parent = TitleBar
+
+local MinBtnCorner = Instance.new("UICorner")
+MinBtnCorner.CornerRadius = UDim.new(0, 6)
+MinBtnCorner.Parent = MinimizeBtn
+
+-- Maximize Button
+local MaximizeBtn = Instance.new("TextButton")
+MaximizeBtn.Name = "MaximizeBtn"
+MaximizeBtn.Size = UDim2.new(0, 30, 0, 30)
+MaximizeBtn.Position = UDim2.new(1, -60, 0.5, -15)
+MaximizeBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 100)
+MaximizeBtn.Text = "□"
+MaximizeBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+MaximizeBtn.TextSize = 18
+MaximizeBtn.Font = Enum.Font.GothamBold
+MaximizeBtn.Visible = false
+MaximizeBtn.Parent = TitleBar
+
+local MaxBtnCorner = Instance.new("UICorner")
+MaxBtnCorner.CornerRadius = UDim.new(0, 6)
+MaxBtnCorner.Parent = MaximizeBtn
+
+-- Close Button
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Name = "CloseBtn"
+CloseBtn.Size = UDim2.new(0, 30, 0, 30)
+CloseBtn.Position = UDim2.new(1, -25, 0.5, -15)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
+CloseBtn.Text = "X"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseBtn.TextSize = 18
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.Parent = TitleBar
+
+local CloseBtnCorner = Instance.new("UICorner")
+CloseBtnCorner.CornerRadius = UDim.new(0, 6)
+CloseBtnCorner.Parent = CloseBtn
+
+-- Content Frame
+local ContentFrame = Instance.new("Frame")
+ContentFrame.Name = "ContentFrame"
+ContentFrame.Size = UDim2.new(1, -20, 1, -70)
+ContentFrame.Position = UDim2.new(0, 10, 0, 60)
+ContentFrame.BackgroundTransparency = 1
+ContentFrame.Parent = MainFrame
+
+-- ESP Toggle Button
+local ESPBtn = Instance.new("TextButton")
+ESPBtn.Name = "ESPBtn"
+ESPBtn.Size = UDim2.new(1, 0, 0, 50)
+ESPBtn.Position = UDim2.new(0, 0, 0, 0)
+ESPBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+ESPBtn.Text = "ESP Fruits: OFF"
+ESPBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ESPBtn.TextSize = 16
+ESPBtn.Font = Enum.Font.GothamBold
+ESPBtn.Parent = ContentFrame
+
+local ESPBtnCorner = Instance.new("UICorner")
+ESPBtnCorner.CornerRadius = UDim.new(0, 8)
+ESPBtnCorner.Parent = ESPBtn
+
+-- Open Fruit List Button
+local OpenListBtn = Instance.new("TextButton")
+OpenListBtn.Name = "OpenListBtn"
+OpenListBtn.Size = UDim2.new(1, 0, 0, 50)
+OpenListBtn.Position = UDim2.new(0, 0, 0, 60)
+OpenListBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+OpenListBtn.Text = "Open Detected Fruits"
+OpenListBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+OpenListBtn.TextSize = 16
+OpenListBtn.Font = Enum.Font.GothamBold
+OpenListBtn.Parent = ContentFrame
+
+local OpenListBtnCorner = Instance.new("UICorner")
+OpenListBtnCorner.CornerRadius = UDim.new(0, 8)
+OpenListBtnCorner.Parent = OpenListBtn
+
+-- Selected Fruit Label
+local SelectedLabel = Instance.new("TextLabel")
+SelectedLabel.Size = UDim2.new(1, 0, 0, 40)
+SelectedLabel.Position = UDim2.new(0, 0, 0, 120)
+SelectedLabel.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+SelectedLabel.Text = "Selected: None"
+SelectedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+SelectedLabel.TextSize = 14
+SelectedLabel.Font = Enum.Font.Gotham
+SelectedLabel.Parent = ContentFrame
+
+local SelectedLabelCorner = Instance.new("UICorner")
+SelectedLabelCorner.CornerRadius = UDim.new(0, 8)
+SelectedLabelCorner.Parent = SelectedLabel
+
+-- TP v1 Button
+local TPv1Btn = Instance.new("TextButton")
+TPv1Btn.Name = "TPv1Btn"
+TPv1Btn.Size = UDim2.new(1, 0, 0, 50)
+TPv1Btn.Position = UDim2.new(0, 0, 0, 170)
+TPv1Btn.BackgroundColor3 = Color3.fromRGB(100, 150, 255)
+TPv1Btn.Text = "TP Fruit v1"
+TPv1Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+TPv1Btn.TextSize = 16
+TPv1Btn.Font = Enum.Font.GothamBold
+TPv1Btn.Parent = ContentFrame
+
+local TPv1BtnCorner = Instance.new("UICorner")
+TPv1BtnCorner.CornerRadius = UDim.new(0, 8)
+TPv1BtnCorner.Parent = TPv1Btn
+
+-- TP v2 Button
+local TPv2Btn = Instance.new("TextButton")
+TPv2Btn.Name = "TPv2Btn"
+TPv2Btn.Size = UDim2.new(1, 0, 0, 50)
+TPv2Btn.Position = UDim2.new(0, 0, 0, 230)
+TPv2Btn.BackgroundColor3 = Color3.fromRGB(255, 100, 150)
+TPv2Btn.Text = "TP Fruit v2 (Testing)"
+TPv2Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+TPv2Btn.TextSize = 16
+TPv2Btn.Font = Enum.Font.GothamBold
+TPv2Btn.Parent = ContentFrame
+
+local TPv2BtnCorner = Instance.new("UICorner")
+TPv2BtnCorner.CornerRadius = UDim.new(0, 8)
+TPv2BtnCorner.Parent = TPv2Btn
+
+-- Fruit List Panel
+local FruitListPanel = Instance.new("Frame")
+FruitListPanel.Name = "FruitListPanel"
+FruitListPanel.Size = UDim2.new(0, 300, 0, 400)
+FruitListPanel.Position = UDim2.new(0.5, 220, 0.5, -200)
+FruitListPanel.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+FruitListPanel.BorderSizePixel = 0
+FruitListPanel.Visible = false
+FruitListPanel.Parent = ScreenGui
+
+local ListPanelCorner = Instance.new("UICorner")
+ListPanelCorner.CornerRadius = UDim.new(0, 12)
+ListPanelCorner.Parent = FruitListPanel
+
+local ListTitleBar = Instance.new("Frame")
+ListTitleBar.Size = UDim2.new(1, 0, 0, 40)
+ListTitleBar.BackgroundColor3 = Color3.fromRGB(45, 45, 65)
+ListTitleBar.BorderSizePixel = 0
+ListTitleBar.Parent = FruitListPanel
+
+local ListTitleCorner = Instance.new("UICorner")
+ListTitleCorner.CornerRadius = UDim.new(0, 12)
+ListTitleCorner.Parent = ListTitleBar
+
+local ListTitle = Instance.new("TextLabel")
+ListTitle.Size = UDim2.new(1, -40, 1, 0)
+ListTitle.BackgroundTransparency = 1
+ListTitle.Text = "Detected Fruits"
+ListTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+ListTitle.TextSize = 16
+ListTitle.Font = Enum.Font.GothamBold
+ListTitle.Parent = ListTitleBar
+
+local ListCloseBtn = Instance.new("TextButton")
+ListCloseBtn.Size = UDim2.new(0, 30, 0, 30)
+ListCloseBtn.Position = UDim2.new(1, -35, 0.5, -15)
+ListCloseBtn.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
+ListCloseBtn.Text = "X"
+ListCloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ListCloseBtn.TextSize = 16
+ListCloseBtn.Font = Enum.Font.GothamBold
+ListCloseBtn.Parent = ListTitleBar
+
+local ListCloseBtnCorner = Instance.new("UICorner")
+ListCloseBtnCorner.CornerRadius = UDim.new(0, 6)
+ListCloseBtnCorner.Parent = ListCloseBtn
+
+local ScrollingFrame = Instance.new("ScrollingFrame")
+ScrollingFrame.Size = UDim2.new(1, -20, 1, -60)
+ScrollingFrame.Position = UDim2.new(0, 10, 0, 50)
+ScrollingFrame.BackgroundTransparency = 1
+ScrollingFrame.ScrollBarThickness = 6
+ScrollingFrame.Parent = FruitListPanel
+
+local ListLayout = Instance.new("UIListLayout")
+ListLayout.Padding = UDim.new(0, 5)
+ListLayout.Parent = ScrollingFrame
+
+-- Dragging Functions
+local function MakeDraggable(frame)
+    local dragging, dragInput, dragStart, startPos
+    
+    local function update(input)
+        local delta = input.Position - dragStart
+        frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+    
+    frame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = frame.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+    
+    frame.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            update(input)
+        end
+    end)
+end
+
+MakeDraggable(TitleBar)
+MakeDraggable(ListTitleBar)
+
+-- Minimize/Maximize Functions
+local isMinimized = false
+
+MinimizeBtn.MouseButton1Click:Connect(function()
+    isMinimized = true
+    ContentFrame.Visible = false
+    MainFrame:TweenSize(UDim2.new(0, 400, 0, 50), "Out", "Quad", 0.3, true)
+    MinimizeBtn.Visible = false
+    MaximizeBtn.Visible = true
+end)
+
+MaximizeBtn.MouseButton1Click:Connect(function()
+    isMinimized = false
+    MainFrame:TweenSize(UDim2.new(0, 400, 0, 500), "Out", "Quad", 0.3, true)
+    task.wait(0.3)
+    ContentFrame.Visible = true
+    MaximizeBtn.Visible = false
+    MinimizeBtn.Visible = true
+end)
+
+CloseBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = false
+    FruitListPanel.Visible = false
+end)
+
+-- ESP Functions
+local function CreateESP(obj, name)
+    local BillboardGui = Instance.new("BillboardGui")
+    BillboardGui.Name = "FruitESP"
+    BillboardGui.AlwaysOnTop = true
+    BillboardGui.Size = UDim2.new(0, 200, 0, 50)
+    BillboardGui.StudsOffset = Vector3.new(0, 3, 0)
+    BillboardGui.Adornee = obj
+    BillboardGui.Parent = obj
+    
+    local Frame = Instance.new("Frame")
+    Frame.Size = UDim2.new(1, 0, 1, 0)
+    Frame.BackgroundTransparency = 0.3
+    Frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    Frame.Parent = BillboardGui
+    
+    local FrameCorner = Instance.new("UICorner")
+    FrameCorner.CornerRadius = UDim.new(0, 8)
+    FrameCorner.Parent = Frame
+    
+    local TextLabel = Instance.new("TextLabel")
+    TextLabel.Size = UDim2.new(1, 0, 0.6, 0)
+    TextLabel.BackgroundTransparency = 1
+    TextLabel.Text = name
+    TextLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    TextLabel.TextSize = 16
+    TextLabel.Font = Enum.Font.GothamBold
+    TextLabel.TextStrokeTransparency = 0
+    TextLabel.Parent = Frame
+    
+    local DistanceLabel = Instance.new("TextLabel")
+    DistanceLabel.Size = UDim2.new(1, 0, 0.4, 0)
+    DistanceLabel.Position = UDim2.new(0, 0, 0.6, 0)
+    DistanceLabel.BackgroundTransparency = 1
+    DistanceLabel.Text = "0m"
+    DistanceLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    DistanceLabel.TextSize = 14
+    DistanceLabel.Font = Enum.Font.Gotham
+    DistanceLabel.TextStrokeTransparency = 0
+    DistanceLabel.Parent = Frame
+    
+    -- RGB Effect for "Fruit ??"
+    if name == "Fruit ??" then
+        spawn(function()
+            while BillboardGui and BillboardGui.Parent do
+                for i = 0, 1, 0.01 do
+                    if not BillboardGui or not BillboardGui.Parent then break end
+                    TextLabel.TextColor3 = Color3.fromHSV(i, 1, 1)
+                    task.wait(0.05)
+                end
+            end
+        end)
+    end
+    
+    -- Update Distance
+    spawn(function()
+        while BillboardGui and BillboardGui.Parent and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") do
+            local distance = (LocalPlayer.Character.HumanoidRootPart.Position - obj.Position).Magnitude
+            DistanceLabel.Text = math.floor(distance) .. "m"
+            task.wait(0.5)
+        end
+    end)
+    
+    return BillboardGui
+end
+
+local function IsValidFruit(name)
+    -- Check if exactly "Fruit"
+    if name == "Fruit" then
+        return true, "Fruit ??"
+    end
+    
+    -- Check if in fruit list
+    for _, fruit in ipairs(FruitList) do
+        if name == fruit then
+            return true, name
+        end
+    end
+    
+    -- Check if starts with something and ends with " Fruit"
+    if name:sub(-6) == " Fruit" then
+        for _, fruit in ipairs(FruitList) do
+            if name == fruit then
+                return true, name
+            end
+        end
+    end
+    
+    return false, nil
+end
+
+local function CheckWorkspace()
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        if (obj:IsA("Tool") or obj:IsA("Model")) and not ESPObjects[obj] then
+            local isValid, displayName = IsValidFruit(obj.Name)
+            if isValid then
+                local primaryPart = obj:IsA("Model") and obj.PrimaryPart or obj:FindFirstChild("Handle")
+                if primaryPart then
+                    DetectedFruits[obj] = {Name = displayName, Object = obj}
+                    
+                    if ESPEnabled then
+                        ESPObjects[obj] = CreateESP(primaryPart, displayName)
+                        
+                        -- Notification
+                        StarterGui:SetCore("SendNotification", {
+                            Title = "Fruit Detected!";
+                            Text = displayName;
+                            Duration = 5;
+                        })
+                        
+                        -- Play Sound
+                        local sound = Instance.new("Sound")
+                        sound.SoundId = "rbxassetid://9086244223"
+                        sound.Volume = 1
+                        sound.Parent = game.SoundService
+                        sound:Play()
+                        game:GetService("Debris"):AddItem(sound, 2)
+                    end
+                end
+            end
+        end
+    end
+end
+
+-- Clean removed fruits
+Workspace.DescendantRemoving:Connect(function(obj)
+    if DetectedFruits[obj] then
+        DetectedFruits[obj] = nil
+        if ESPObjects[obj] then
+            ESPObjects[obj]:Destroy()
+            ESPObjects[obj] = nil
+        end
+    end
+end)
+
+-- ESP Toggle
+ESPBtn.MouseButton1Click:Connect(function()
+    ESPEnabled = not ESPEnabled
+    ESPBtn.Text = ESPEnabled and "ESP Fruits: ON" or "ESP Fruits: OFF"
+    ESPBtn.BackgroundColor3 = ESPEnabled and Color3.fromRGB(80, 200, 120) or Color3.fromRGB(60, 60, 80)
+    
+    if ESPEnabled then
+        CheckWorkspace()
+        RunService.Heartbeat:Connect(function()
+            if ESPEnabled then
+                CheckWorkspace()
+            end
+        end)
+    else
+        for obj, esp in pairs(ESPObjects) do
+            esp:Destroy()
+        end
+        ESPObjects = {}
+    end
+end)
+
+-- Open Fruit List
+OpenListBtn.MouseButton1Click:Connect(function()
+    FruitListPanel.Visible = not FruitListPanel.Visible
+    
+    -- Clear old list
+    for _, child in ipairs(ScrollingFrame:GetChildren()) do
+        if child:IsA("TextButton") then
+            child:Destroy()
+        end
+    end
+    
+    -- Populate list
+    local yPos = 0
+    for _, data in pairs(DetectedFruits) do
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(1, 0, 0, 40)
+        btn.Position = UDim2.new(0, 0, 0, yPos)
+        btn.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+        btn.Text = data.Name
+        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        btn.TextSize = 14
+        btn.Font = Enum.Font.Gotham
+        btn.Parent = ScrollingFrame
+        
+        local btnCorner = Instance.new("UICorner")
+        btnCorner.CornerRadius = UDim.new(0, 6)
+        btnCorner.Parent = btn
+        
+        btn.MouseButton1Click:Connect(function()
+            SelectedFruit = data.Object
+            SelectedLabel.Text = "Selected: " .. data.Name
+            FruitListPanel.Visible = false
+        end)
+        
+        yPos = yPos + 45
+    end
+    
+    ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, yPos)
+end)
+
+ListCloseBtn.MouseButton1Click:Connect(function()
+    FruitListPanel.Visible = false
+end)
+
+-- TP v1 Function
+TPv1Btn.MouseButton1Click:Connect(function()
+    if not SelectedFruit or TPInProgress then return end
+    
+    local char = LocalPlayer.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    
+    TPInProgress = true
+    local hrp = char.HumanoidRootPart
+    local targetPos = SelectedFruit:IsA("Model") and SelectedFruit.PrimaryPart.Position or SelectedFruit.Handle.Position
+    
+    -- Go up
+    hrp.CFrame = hrp.CFrame + Vector3.new(0, 89, 0)
+    task.wait(0.1)
+    
+    -- Float to target
+    local distance = (hrp.Position - targetPos).Magnitude
+    local duration = distance / 150 -- Speed
+    
+    local tween = TweenService:Create(hrp, TweenInfo.new(duration, Enum.EasingStyle.Linear), {
+        CFrame = CFrame.new(targetPos + Vector3.new(0, 5, 0))
+    })
+    tween:Play()
+    tween.Completed:Wait()
+    
+    TPInProgress = false
+end)
+
+-- TP v2 Function
+TPv2Btn.MouseButton1Click:Connect(function()
+    if not SelectedFruit or TPInProgress then return end
+    
+    local char = LocalPlayer.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    
+    TPInProgress = true
+    
+    -- Equip second item
+    local backpack = LocalPlayer.Backpack
+    local tools = backpack:GetChildren()
+    if #tools >= 2 then
+        local tool = tools[2]
+        char.Humanoid:EquipTool(tool)
+        task.wait(0.1)
+        
+        -- Press C
+        local vim = game:GetService("VirtualInputManager")
+        vim:SendKeyEvent(true, Enum.KeyCode.C, false, game)
+        task.wait(0.05)
+        vim:SendKeyEvent(false, Enum.KeyCode.C, false, game)
+        
+        task.wait(0.9)
+        
+        -- Instant TP
+        local targetPos = SelectedFruit:IsA("Model") and SelectedFruit.PrimaryPart.Position or SelectedFruit.Handle.Position
+        char.HumanoidRootPart.CFrame = CFrame.new(targetPos + Vector3.new(0, 5, 0))
+    end
+    
+    TPInProgress = false
+end)
