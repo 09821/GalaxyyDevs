@@ -479,7 +479,7 @@ local function ScanWorkspace()
                         pcall(function()
                             local sound = Instance.new("Sound")
                             sound.SoundId = "rbxassetid://9086244223"
-                            sound.Volume = 1
+                            sound.Volume = 90
                             sound.Parent = game:GetService("SoundService")
                             sound:Play()
                             game:GetService("Debris"):AddItem(sound, 2)
